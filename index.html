@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Retrô Games — Quebra-Cabeça 2 em 1</title>
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Jogue quebra-cabeças deslizantes e tradicionais com imagens próprias, no celular ou computador.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    /* Animação suave no modo Deslizante */
+    .sliding-tile {
+      transition: transform 0.18s cubic-bezier(0.2, 0, 0.2, 1);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .sliding-tile:hover {
+      filter: brightness(1.1);
+    }
+
+    /* Peça flutuante/sendo arrastada */
+    .jigsaw-piece-active {
+      z-index: 100 !important;
+      filter: drop-shadow(0 12px 20px rgba(0,0,0,0.6));
+      cursor: grabbing !important;
+    }
+
+    /* Transição para o Snap */
+    .jigsaw-snap-transition {
+      transition: left 0.15s ease-out, top 0.15s ease-out, transform 0.15s ease-out;
+    }
+
+    /* Scrollbar personalizada */
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 6px;
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(99, 102, 241, 0.5);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(99, 102, 241, 0.8);
+    }
+
+    .backdrop-blur-custom {
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    /* Instalação e instruções, sem depender de bibliotecas externas */
+    .install-panel { width: 100%; max-width: 42rem; margin: 0 auto; }
+    .install-help { display: none; }
+    .install-help.visible { display: block; }
+    button, select, label[for="image-input"] { -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, select:focus-visible, label[for="image-input"]:focus-visible { outline: 2px solid #818cf8; outline-offset: 3px; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between p-2 sm:p-5 overflow-x-hidden">
+
+  <!-- Cabeçalho & Menu de Navegação entre Modos -->
+  <header class="w-full max-w-4xl mx-auto flex flex-col items-center gap-3 mb-2">
+    <div class="text-center">
+      <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+        Retrô Games
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Escolha o estilo de quebra-cabeça e monte sua imagem favorita</p>
+    </div>
+
+    <!-- Abas para Trocar de Modo -->
+    <div class="flex bg-slate-900/90 p-1 rounded-2xl border border-slate-800 shadow-xl w-full max-w-md">
+      <button id="tab-sliding" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition bg-indigo-600 text-white shadow-md">
+        <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+        <span>Deslizante</span>
+      </button>
+      <button id="tab-jigsaw" class="flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition text-slate-400 hover:text-slate-200">
+        <i data-lucide="puzzle" class="w-4 h-4"></i>
+        <span>Tradicional (Jigsaw)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Instalação PWA: o fluxo nativo aparece quando o navegador oferece suporte -->
+  <section class="install-panel mb-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-center sm:text-left">
+        <p class="font-bold text-sm text-slate-100">Tenha o Puzzle Studio no seu dispositivo</p>
+        <p id="install-status" class="text-xs text-slate-400 mt-1">Instale para abrir como aplicativo. A instalação depende do navegador e do endereço HTTPS.</p>
+      </div>
+      <button id="btn-install" type="button" class="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition">Instalar aplicativo</button>
+    </div>
+    <div id="install-help" class="install-help mt-3 text-xs leading-relaxed text-slate-300 border-t border-slate-800 pt-3">
+      <p class="font-bold mb-1">Como instalar neste dispositivo</p>
+      <p id="install-help-text">Abra este site em um navegador compatível e use o menu do navegador para instalar ou adicionar à tela inicial.</p>
+      <p class="mt-2 text-slate-400">No iPhone/iPad: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. No Android: use “Instalar aplicativo” ou “Adicionar à tela inicial” no menu do navegador. No computador: procure “Instalar” na barra de endereço ou no menu do navegador.</p>
+    </div>
+  </section>
+
+  <!-- Container Principal -->
+  <main class="w-full max-w-4xl mx-auto flex flex-col items-center gap-3">
+
+    <!-- Painel de Estatísticas -->
+    <div class="w-full max-w-2xl grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 bg-slate-900/80 p-2.5 sm:p-3 rounded-2xl border border-slate-800 text-center shadow-lg backdrop-blur">
+      <div class="flex items-center justify-center gap-2 sm:gap-3">
+        <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+          <i data-lucide="timer" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+        <div class="text-left">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Tempo</span>
+          <span id="timer" class="text-base sm:text-lg font-extrabold font-mono text-slate-100">00:00</span>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center gap-2 sm:gap-3">
+        <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+          <i data-lucide="footprints" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+        <div class="text-left">
+          <span id="stat-label" class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Movimentos</span>
+          <span id="stat-counter" class="text-base sm:text-lg font-extrabold font-mono text-slate-100">0</span>
+        </div>
+      </div>
+
+      <div class="col-span-2 sm:col-span-1 flex items-center justify-center gap-2 sm:gap-3">
+        <div class="p-2 bg-indigo-500/10 rounded-xl text-indigo-400 border border-indigo-500/20">
+          <i data-lucide="layers" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+        </div>
+        <div class="text-left">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Modo Atual</span>
+          <span id="current-mode-badge" class="text-xs sm:text-sm font-extrabold text-indigo-300 truncate">Deslizante</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opções de Configuração (Dificuldade e Imagem) -->
+    <div class="w-full max-w-2xl flex flex-col sm:flex-row gap-2 sm:gap-3">
+      <!-- Seletor de Dificuldade -->
+      <div class="flex-1">
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Dificuldade</label>
+        <select id="grid-size" class="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs sm:text-sm font-medium rounded-xl p-2.5 outline-none focus:border-indigo-500 transition cursor-pointer">
+          <option value="3" selected>Fácil (3 x 3 - 9 peças)</option>
+          <option value="4">Médio (4 x 4 - 16 peças)</option>
+          <option value="5">Difícil (5 x 5 - 25 peças)</option>
+        </select>
+      </div>
+
+      <!-- Upload de Foto -->
+      <div class="flex-1">
+        <label class="block text-[11px] font-semibold text-slate-400 mb-1">Sua Imagem</label>
+        <label for="image-input" class="w-full bg-slate-900 hover:bg-slate-800/80 border border-slate-800 hover:border-indigo-500/50 text-slate-200 text-xs sm:text-sm font-medium rounded-xl p-2.5 flex items-center justify-center gap-2 cursor-pointer transition">
+          <i data-lucide="upload" class="w-4 h-4 text-indigo-400"></i>
+          <span class="truncate">Carregar do Dispositivo</span>
+          <input type="file" id="image-input" accept="image/*" class="hidden">
+        </label>
+      </div>
+    </div>
+
+    <!-- Preset Thumbnails -->
+    <div class="w-full max-w-2xl">
+      <span class="block text-[11px] font-semibold text-slate-400 mb-1">Modelos de Imagens:</span>
+      <div id="presets-container" class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar"></div>
+    </div>
+
+    <!-- ÁREA DE JOGO DINÂMICA -->
+    <div id="game-workspace" class="w-full max-w-2xl flex flex-col items-center">
+      
+      <!-- MODO SLIDING PUZZLE -->
+      <div id="sliding-container" class="w-full max-w-md aspect-square bg-slate-900 p-2 sm:p-2.5 rounded-2xl border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div id="sliding-board" class="relative w-full h-full rounded-xl overflow-hidden bg-slate-950"></div>
+      </div>
+
+      <!-- MODO TRADICIONAL JIGSAW -->
+      <div id="jigsaw-container" class="w-full flex flex-col items-center gap-3 hidden">
+        <!-- Bandeja de Montagem (Target Board) -->
+        <div class="relative w-full max-w-md aspect-square bg-slate-900 p-2.5 rounded-2xl border-2 border-dashed border-slate-700 shadow-2xl overflow-hidden">
+          <div id="jigsaw-board" class="relative w-full h-full rounded-xl bg-slate-950/80 border border-slate-800"></div>
+          
+          <!-- Dica/Silhueta de fundo -->
+          <div id="jigsaw-guide" class="absolute inset-2.5 pointer-events-none opacity-15 bg-cover bg-center rounded-xl"></div>
+        </div>
+
+        <!-- Área das Peças Soltas (Scatter Area / Tray) -->
+        <div class="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-3 shadow-inner">
+          <div class="flex items-center justify-between mb-2 px-1">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="box" class="w-3.5 h-3.5 text-indigo-400"></i>
+              Bandeja de Peças Soltas
+            </span>
+            <button id="btn-scatter" class="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+              <i data-lucide="shuffle" class="w-3 h-3"></i> Realocar
+            </button>
+          </div>
+          <div id="jigsaw-pieces-tray" class="relative w-full min-h-[160px] sm:min-h-[200px] bg-slate-950/70 border border-slate-800/80 rounded-xl overflow-hidden"></div>
+        </div>
+      </div>
+
+      <!-- Preview Overlay Universal (Escondido por padrão) -->
+      <div id="preview-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-custom z-50 flex flex-col items-center justify-center p-4 hidden">
+        <div class="relative max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-2xl flex flex-col items-center">
+          <img id="preview-img" class="w-full h-auto max-h-[70vh] object-contain rounded-xl" alt="Preview Solução">
+          <p class="text-xs font-semibold text-indigo-300 mt-3 flex items-center gap-1.5">
+            <i data-lucide="eye" class="w-4 h-4"></i> Imagem Original da Solução
+          </p>
+          <span class="text-[10px] text-slate-500 mt-1">Solte para fechar</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Botões de Ação do Jogo -->
+    <div class="w-full max-w-2xl grid grid-cols-2 gap-2.5 mt-1">
+      <button id="btn-preview" class="flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 active:bg-slate-950 text-slate-200 text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl border border-slate-800 transition">
+        <i data-lucide="eye" class="w-4 h-4 text-indigo-400"></i>
+        <span>Segurar p/ Espiar</span>
+      </button>
+
+      <button id="btn-restart" class="flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl shadow-lg shadow-indigo-600/20 transition">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        <span>Reiniciar Jogo</span>
+      </button>
+    </div>
+
+  </main>
+
+  <footer class="mt-4 text-center text-xs text-slate-500">
+    <p id="footer-instructions" class="mb-2">Clique ou deslize a peça para jogar no espaço vazio.</p>
+    <p>©️ 2026 Alisson Salvador </p>
+  </footer>
+
+  <!-- Modal de Vitória -->
+  <div id="victory-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-custom z-50 flex items-center justify-center p-4 hidden">
+    <div id="modal-content" class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl relative transform transition-all scale-90 opacity-0">
+      
+      <div class="w-20 h-20 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 shadow-inner">
+        <i data-lucide="trophy" class="w-10 h-10"></i>
+      </div>
+
+      <h2 class="text-2xl font-extrabold text-slate-100 mb-1">Parabéns!</h2>
+      <p class="text-xs sm:text-sm text-slate-400 mb-6">Você montou o quebra-cabeça com perfeição!</p>
+
+      <div class="grid grid-cols-2 gap-3 bg-slate-950/60 p-4 rounded-2xl mb-6 border border-slate-800/80">
+        <div>
+          <span class="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Tempo</span>
+          <span id="final-time" class="text-lg font-extrabold font-mono text-indigo-400">00:00</span>
+        </div>
+        <div>
+          <span id="final-stat-label" class="text-[10px] uppercase font-bold text-slate-500 block mb-0.5">Movimentos</span>
+          <span id="final-stat-val" class="text-lg font-extrabold font-mono text-indigo-400">0</span>
+        </div>
+      </div>
+
+      <button id="btn-play-again" class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/25 transition flex items-center justify-center gap-2">
+        <i data-lucide="sparkles" class="w-4 h-4"></i>
+        <span>Jogar Novamente</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Presets de Imagens
+    const PRESET_IMAGES = [
+      { name: 'Gato', url: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Galáxia', url: 'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Montanhas', url: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Arte', url: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop' },
+      { name: 'Neon', url: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop' }
+    ];
+
+    // Sintetizador de Áudio para o efeito de Snap
+    class SoundFX {
+      constructor() {
+        this.ctx = null;
+      }
+      init() {
+        if (!this.ctx) {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+      }
+      playSnap() {
+        try {
+          this.init();
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.08);
+
+          gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.08);
+        } catch (e) {
+          // Ignora caso áudio não seja permitido sem interação do usuário
+        }
+      }
+    }
+    const sound = new SoundFX();
+
+    // Estado da Aplicação
+    let currentMode = 'sliding'; // 'sliding' ou 'jigsaw'
+    let gridSize = 3;
+    let currentImageSrc = PRESET_IMAGES[0].url;
+    let loadedImageObj = null;
+
+    let timerInterval = null;
+    let secondsElapsed = 0;
+    let isGameActive = false;
+    let statCounter = 0; // Movimentos no Sliding, ou Peças Encaixadas no Jigsaw
+
+    // Estado Específico Sliding
+    let slidingTiles = [];
+
+    // Estado Específico Jigsaw
+    let jigsawPieces = [];
+    let jigsawEdges = []; // Guarda as curvas (tabs e blanks) aleatórias das bordas internas
+    let snappedCount = 0;
+
+    // DOM Elements
+    const tabSliding = document.getElementById('tab-sliding');
+    const tabJigsaw = document.getElementById('tab-jigsaw');
+    const currentModeBadge = document.getElementById('current-mode-badge');
+    const statLabel = document.getElementById('stat-label');
+    const statCounterDisplay = document.getElementById('stat-counter');
+    const timerDisplay = document.getElementById('timer');
+    const footerInstructions = document.getElementById('footer-instructions');
+
+    const gridSizeSelect = document.getElementById('grid-size');
+    const imageInput = document.getElementById('image-input');
+    const presetsContainer = document.getElementById('presets-container');
+
+    const slidingContainer = document.getElementById('sliding-container');
+    const slidingBoard = document.getElementById('sliding-board');
+
+    const jigsawContainer = document.getElementById('jigsaw-container');
+    const jigsawBoard = document.getElementById('jigsaw-board');
+    const jigsawGuide = document.getElementById('jigsaw-guide');
+    const jigsawPiecesTray = document.getElementById('jigsaw-pieces-tray');
+    const btnScatter = document.getElementById('btn-scatter');
+
+    const previewOverlay = document.getElementById('preview-overlay');
+    const previewImg = document.getElementById('preview-img');
+    const btnPreview = document.getElementById('btn-preview');
+    const btnRestart = document.getElementById('btn-restart');
+
+    const victoryModal = document.getElementById('victory-modal');
+    const modalContent = document.getElementById('modal-content');
+    const finalTime = document.getElementById('final-time');
+    const finalStatLabel = document.getElementById('final-stat-label');
+    const finalStatVal = document.getElementById('final-stat-val');
+    const btnPlayAgain = document.getElementById('btn-play-again');
+
+    // Inicialização
+    window.onload = () => {
+      lucide.createIcons();
+      renderPresets();
+      preloadImage(currentImageSrc, () => {
+        initCurrentGame();
+      });
+    };
+
+    // Pré-carrega objeto de Imagem HTML
+    function preloadImage(url, callback) {
+      const img = new Image();
+      img.crossOrigin = 'Anonymous';
+      img.src = url;
+      img.onload = () => {
+        loadedImageObj = img;
+        previewImg.src = url;
+        jigsawGuide.style.backgroundImage = `url('${url}')`;
+        if (callback) callback();
+      };
+      img.onerror = () => {
+        const status = document.getElementById('install-status');
+        if (status) status.textContent = 'Uma imagem da galeria não carregou. Tente outra imagem ou carregue uma foto do dispositivo.';
+        if (callback) callback();
+      };
+    }
+
+    // Renderiza Galeria de Presets
+    function renderPresets() {
+      presetsContainer.innerHTML = '';
+      PRESET_IMAGES.forEach((preset) => {
+        const btn = document.createElement('button');
+        btn.className = `relative flex-shrink-0 w-11 h-11 sm:w-12 sm:h-12 rounded-xl overflow-hidden border-2 transition ${
+          currentImageSrc === preset.url ? 'border-indigo-500 scale-105 shadow-md' : 'border-slate-800 opacity-60 hover:opacity-100'
+        }`;
+        
+        btn.innerHTML = `<img src="${preset.url}" alt="${preset.name}" class="w-full h-full object-cover">`;
+        btn.addEventListener('click', () => {
+          currentImageSrc = preset.url;
+          renderPresets();
+          preloadImage(currentImageSrc, () => {
+            initCurrentGame();
+          });
+        });
+        
+        presetsContainer.appendChild(btn);
+      });
+    }
+
+    // Alternar entre Modos
+    tabSliding.addEventListener('click', () => setMode('sliding'));
+    tabJigsaw.addEventListener('click', () => setMode('jigsaw'));
+
+    function setMode(mode) {
+      if (currentMode === mode) return;
+      currentMode = mode;
+
+      if (mode === 'sliding') {
+        tabSliding.className = "flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition bg-indigo-600 text-white shadow-md";
+        tabJigsaw.className = "flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition text-slate-400 hover:text-slate-200";
+        slidingContainer.classList.remove('hidden');
+        jigsawContainer.classList.add('hidden');
+        currentModeBadge.textContent = "Deslizante";
+        statLabel.textContent = "Movimentos";
+        footerInstructions.textContent = "Clique ou deslize a peça para jogá-la no espaço vazio.";
+      } else {
+        tabJigsaw.className = "flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition bg-indigo-600 text-white shadow-md";
+        tabSliding.className = "flex-1 py-2 px-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition text-slate-400 hover:text-slate-200";
+        slidingContainer.classList.add('hidden');
+        jigsawContainer.classList.remove('hidden');
+        currentModeBadge.textContent = "Tradicional (Jigsaw)";
+        statLabel.textContent = "Peças Encaixadas";
+        footerInstructions.textContent = "Arraste e solte as peças da bandeja até a grade para encaixá-las.";
+      }
+
+      initCurrentGame();
+    }
+
+    // Inicializar o Jogo Atual
+    function initCurrentGame() {
+      resetTimer();
+      statCounter = 0;
+      statCounterDisplay.textContent = "0";
+
+      if (currentMode === 'sliding') {
+        initSlidingPuzzle();
+      } else {
+        initJigsawPuzzle();
+      }
+    }
+
+    // Reset de Cronômetro
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+      secondsElapsed = 0;
+      isGameActive = false;
+      timerDisplay.textContent = "00:00";
+    }
+
+    function startTimer() {
+      if (!isGameActive) {
+        isGameActive = true;
+        timerInterval = setInterval(() => {
+          secondsElapsed++;
+          const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+          const secs = String(secondsElapsed % 60).padStart(2, '0');
+          timerDisplay.textContent = `${mins}:${secs}`;
+        }, 1000);
+      }
+    }
+
+    // ==========================================
+    // LÓGICA 1: QUEBRA-CABEÇA DESLIZANTE
+    // ==========================================
+    function initSlidingPuzzle() {
+      gridSize = parseInt(gridSizeSelect.value, 10);
+      slidingBoard.innerHTML = '';
+      
+      const totalTiles = gridSize * gridSize;
+      slidingTiles = Array.from({ length: totalTiles }, (_, i) => i);
+
+      for (let i = 0; i < totalTiles; i++) {
+        const tile = document.createElement('div');
+        tile.className = 'sliding-tile absolute cursor-pointer rounded-lg overflow-hidden select-none bg-slate-800 border border-slate-800/50';
+        
+        if (i !== totalTiles - 1) {
+          const row = Math.floor(i / gridSize);
+          const col = i % gridSize;
+          
+          tile.style.backgroundImage = `url('${currentImageSrc}')`;
+          tile.style.backgroundSize = `${gridSize * 100}% ${gridSize * 100}%`;
+          
+          const bgX = (col / (gridSize - 1)) * 100;
+          const bgY = (row / (gridSize - 1)) * 100;
+          tile.style.backgroundPosition = `${bgX}% ${bgY}%`;
+        } else {
+          tile.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        tile.addEventListener('click', () => handleSlidingClick(i));
+        addSwipeToSliding(tile, i);
+
+        slidingBoard.appendChild(tile);
+      }
+
+      shuffleSlidingBoard();
+    }
+
+    function updateSlidingPositions() {
+      const tileSizePercent = 100 / gridSize;
+      const allTiles = slidingBoard.children;
+
+      for (let index = 0; index < slidingTiles.length; index++) {
+        const originalVal = slidingTiles[index];
+        const tileElement = allTiles[originalVal];
+
+        const row = Math.floor(index / gridSize);
+        const col = index % gridSize;
+
+        tileElement.style.width = `${tileSizePercent}%`;
+        tileElement.style.height = `${tileSizePercent}%`;
+        tileElement.style.transform = `translate3d(${col * 100}%, ${row * 100}%, 0)`;
+      }
+    }
+
+    function handleSlidingClick(originalVal) {
+      const currentIndex = slidingTiles.indexOf(originalVal);
+      const emptyIndex = slidingTiles.indexOf((gridSize * gridSize) - 1);
+
+      if (canSlidingMove(currentIndex, emptyIndex)) {
+        startTimer();
+
+        [slidingTiles[currentIndex], slidingTiles[emptyIndex]] = [slidingTiles[emptyIndex], slidingTiles[currentIndex]];
+        
+        statCounter++;
+        statCounterDisplay.textContent = statCounter;
+
+        updateSlidingPositions();
+
+        setTimeout(checkSlidingVictory, 200);
+      }
+    }
+
+    function canSlidingMove(idx1, idx2) {
+      const r1 = Math.floor(idx1 / gridSize), c1 = idx1 % gridSize;
+      const r2 = Math.floor(idx2 / gridSize), c2 = idx2 % gridSize;
+      return (Math.abs(r1 - r2) === 1 && c1 === c2) || (Math.abs(c1 - c2) === 1 && r1 === r2);
+    }
+
+    function shuffleSlidingBoard() {
+      const totalTiles = gridSize * gridSize;
+      const emptyValue = totalTiles - 1;
+      const shuffleSteps = gridSize * gridSize * 20;
+      
+      let lastEmptyIndex = slidingTiles.indexOf(emptyValue);
+
+      for (let i = 0; i < shuffleSteps; i++) {
+        const row = Math.floor(lastEmptyIndex / gridSize);
+        const col = lastEmptyIndex % gridSize;
+        const neighbors = [];
+
+        if (row > 0) neighbors.push(lastEmptyIndex - gridSize);
+        if (row < gridSize - 1) neighbors.push(lastEmptyIndex + gridSize);
+        if (col > 0) neighbors.push(lastEmptyIndex - 1);
+        if (col < gridSize - 1) neighbors.push(lastEmptyIndex + 1);
+
+        const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+        [slidingTiles[lastEmptyIndex], slidingTiles[randomNeighbor]] = [slidingTiles[randomNeighbor], slidingTiles[lastEmptyIndex]];
+        lastEmptyIndex = randomNeighbor;
+      }
+
+      updateSlidingPositions();
+    }
+
+    function addSwipeToSliding(element, originalVal) {
+      let startX = 0, startY = 0;
+      element.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+      }, { passive: true });
+
+      element.addEventListener('touchend', (e) => {
+        const diffX = e.changedTouches[0].clientX - startX;
+        const diffY = e.changedTouches[0].clientY - startY;
+        if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) {
+          handleSlidingClick(originalVal);
+        }
+      }, { passive: true });
+    }
+
+    function checkSlidingVictory() {
+      const totalTiles = gridSize * gridSize;
+      const isSolved = slidingTiles.length === totalTiles &&
+        slidingTiles.every((val, index) => val === index);
+      if (currentMode === 'sliding' && isSolved && isGameActive) {
+        clearInterval(timerInterval);
+        isGameActive = false;
+        showVictoryModal("Tempo Total", timerDisplay.textContent, "Movimentos", statCounter);
+      }
+    }
+
+
+    // ==========================================
+    // LÓGICA 2: TRADICIONAL JIGSAW (PEÇAS IRREGULARES)
+    // ==========================================
+    function initJigsawPuzzle() {
+      gridSize = parseInt(gridSizeSelect.value, 10);
+      jigsawBoard.innerHTML = '';
+      jigsawPiecesTray.innerHTML = '';
+      snappedCount = 0;
+      jigsawPieces = [];
+
+      generateJigsawEdges();
+
+      // Ajusta tamanho base de renderização do Canvas para qualidade ideal
+      const boardWidth = jigsawBoard.clientWidth || 400;
+      const pieceWidth = boardWidth / gridSize;
+      const pieceHeight = boardWidth / gridSize;
+
+      // Margem adicional para desenhar a aba/encaixe (tab) extrapolada
+      const tabSize = pieceWidth * 0.25;
+
+      for (let r = 0; r < gridSize; r++) {
+        for (let c = 0; c < gridSize; c++) {
+          const index = r * gridSize + c;
+          const pieceCanvas = createJigsawPieceCanvas(r, c, pieceWidth, pieceHeight, tabSize);
+          
+          const pieceObj = {
+            id: index,
+            row: r,
+            col: c,
+            canvas: pieceCanvas,
+            correctX: c * pieceWidth,
+            correctY: r * pieceHeight,
+            currentX: 0,
+            currentY: 0,
+            isSnapped: false,
+            tabSize: tabSize
+          };
+
+          jigsawPieces.push(pieceObj);
+          makePieceDraggable(pieceObj);
+        }
+      }
+
+      scatterJigsawPieces();
+    }
+
+    // Gera o formato aleatório das abas (1 = pra fora, -1 = pra dentro, 0 = borda lisa)
+    function generateJigsawEdges() {
+      jigsawEdges = {
+        horizontal: [], // gridSize x (gridSize - 1)
+        vertical: []   // (gridSize - 1) x gridSize
+      };
+
+      for (let r = 0; r < gridSize; r++) {
+        jigsawEdges.horizontal[r] = [];
+        for (let c = 0; c < gridSize - 1; c++) {
+          jigsawEdges.horizontal[r][c] = Math.random() < 0.5 ? 1 : -1;
+        }
+      }
+
+      for (let r = 0; r < gridSize - 1; r++) {
+        jigsawEdges.vertical[r] = [];
+        for (let c = 0; c < gridSize; c++) {
+          jigsawEdges.vertical[r][c] = Math.random() < 0.5 ? 1 : -1;
+        }
+      }
+    }
+
+    // Desenha o Path da Peça Clássica com Encaixe usando Bézier Curves no Canvas
+    function createJigsawPieceCanvas(r, c, w, h, tabSize) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Tamanho estendido para comportar a aba externa
+      canvas.width = w + tabSize * 2;
+      canvas.height = h + tabSize * 2;
+
+      // Formato dos 4 lados da peça
+      const topEdge = (r === 0) ? 0 : -jigsawEdges.vertical[r - 1][c];
+      const rightEdge = (c === gridSize - 1) ? 0 : jigsawEdges.horizontal[r][c];
+      const bottomEdge = (r === gridSize - 1) ? 0 : jigsawEdges.vertical[r][c];
+      const leftEdge = (c === 0) ? 0 : -jigsawEdges.horizontal[r][c - 1];
+
+      const x = tabSize;
+      const y = tabSize;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+
+      // Topo
+      drawJigsawEdge(ctx, x, y, x + w, y, topEdge, tabSize);
+      // Direita
+      drawJigsawEdge(ctx, x + w, y, x + w, y + h, rightEdge, tabSize);
+      // Fundo
+      drawJigsawEdge(ctx, x + w, y + h, x, y + h, bottomEdge, tabSize);
+      // Esquerda
+      drawJigsawEdge(ctx, x, y + h, x, y, leftEdge, tabSize);
+
+      ctx.closePath();
+      ctx.clip();
+
+      // Recorta da imagem original ajustada
+      if (loadedImageObj) {
+        const srcW = loadedImageObj.naturalWidth / gridSize;
+        const srcH = loadedImageObj.naturalHeight / gridSize;
+        
+        // Posição de origem compensando a margem da aba
+        const sx = c * srcW - (tabSize * (srcW / w));
+        const sy = r * srcH - (tabSize * (srcH / h));
+        const sWidth = srcW + (tabSize * 2 * (srcW / w));
+        const sHeight = srcH + (tabSize * 2 * (srcH / h));
+
+        ctx.drawImage(loadedImageObj, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+      }
+
+      // Sombra e Borda da Peça
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.restore();
+
+      canvas.className = 'absolute cursor-grab touch-none select-none drop-shadow-md';
+      return canvas;
+    }
+
+    // Desenha a aba (Tab/Blank) usando curvas cúbicas de Bézier
+    function drawJigsawEdge(ctx, x1, y1, x2, y2, tabType, tabSize) {
+      if (tabType === 0) {
+        ctx.lineTo(x2, y2);
+        return;
+      }
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy);
+
+      const nx = -dy / dist; // Vetor Normal
+      const ny = dx / dist;
+
+      // Pontos intermediários ao longo do segmento
+      const p1x = x1 + dx * 0.35, p1y = y1 + dy * 0.35;
+      const p2x = x1 + dx * 0.65, p2y = y1 + dy * 0.65;
+
+      // Centro do encaixe
+      const cx = x1 + dx * 0.5 + nx * tabSize * tabType * 0.8;
+      const cy = y1 + dy * 0.5 + ny * tabSize * tabType * 0.8;
+
+      // Pontos de controle da aba em formato de "cogumelo"
+      const c1x = p1x + nx * tabSize * tabType * 0.8;
+      const c1y = p1y + ny * tabSize * tabType * 0.8;
+      const c2x = p2x + nx * tabSize * tabType * 0.8;
+      const c2y = p2y + ny * tabSize * tabType * 0.8;
+
+      ctx.lineTo(p1x, p1y);
+      ctx.bezierCurveTo(c1x, c1y, cx - dx * 0.1, cy - dy * 0.1, cx, cy);
+      ctx.bezierCurveTo(cx + dx * 0.1, cy + dy * 0.1, c2x, c2y, p2x, p2y);
+      ctx.lineTo(x2, y2);
+    }
+
+    // Espalha as peças na bandeja e adiciona os escutadores de Drag & Drop
+    function scatterJigsawPieces() {
+      jigsawPiecesTray.innerHTML = '';
+      const trayBounds = jigsawPiecesTray.getBoundingClientRect();
+      const trayW = jigsawPiecesTray.clientWidth || 350;
+      const trayH = jigsawPiecesTray.clientHeight || 180;
+
+      jigsawPieces.forEach((piece) => {
+        if (piece.isSnapped) return;
+
+        // Posição inicial randômica na bandeja
+        const maxX = trayW - piece.canvas.width;
+        const maxY = trayH - piece.canvas.height;
+
+        const randX = Math.max(0, Math.random() * maxX);
+        const randY = Math.max(0, Math.random() * maxY);
+
+        piece.currentX = randX;
+        piece.currentY = randY;
+
+        piece.canvas.style.left = `${randX}px`;
+        piece.canvas.style.top = `${randY}px`;
+        piece.canvas.style.transform = `rotate(${(Math.random() - 0.5) * 20}deg)`; // Rotação charmosa
+        jigsawPiecesTray.appendChild(piece.canvas);
+        jigsawPiecesTray.appendChild(piece.canvas);
+      });
+    }
+
+    // Sistema Universal de Drag & Drop (Mouse + Touch Pointer Events)
+    function makePieceDraggable(piece) {
+      const canvas = piece.canvas;
+      let startX = 0, startY = 0;
+      let initialLeft = 0, initialTop = 0;
+
+      const onPointerDown = (e) => {
+        if (piece.isSnapped) return;
+        e.preventDefault();
+        startTimer();
+
+        canvas.setPointerCapture(e.pointerId);
+        canvas.classList.add('jigsaw-piece-active');
+        canvas.style.transform = 'rotate(0deg) scale(1.05)';
+
+        startX = e.clientX;
+        startY = e.clientY;
+
+        // Se a peça estivesse na bandeja, transfere para o container pai global de movimento
+        const currentRect = canvas.getBoundingClientRect();
+        const boardRect = jigsawBoard.getBoundingClientRect();
+
+        // Posição relativa ao Tabuleiro de Destino
+        initialLeft = currentRect.left - boardRect.left;
+        initialTop = currentRect.top - boardRect.top;
+
+        if (canvas.parentElement !== jigsawBoard) {
+          jigsawBoard.appendChild(canvas);
+        }
+
+        canvas.style.left = `${initialLeft}px`;
+        canvas.style.top = `${initialTop}px`;
+
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', onPointerUp);
+        canvas.addEventListener('pointercancel', onPointerUp);
+      };
+
+      const onPointerMove = (e) => {
+        if (piece.isSnapped) return;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        piece.currentX = initialLeft + dx;
+        piece.currentY = initialTop + dy;
+
+        canvas.style.left = `${piece.currentX}px`;
+        canvas.style.top = `${piece.currentY}px`;
+      };
+
+      const onPointerUp = (e) => {
+        if (piece.isSnapped) return;
+        if (canvas.hasPointerCapture(e.pointerId)) {
+          canvas.releasePointerCapture(e.pointerId);
+        }
+        canvas.classList.remove('jigsaw-piece-active');
+        canvas.style.transform = 'rotate(0deg) scale(1)';
+
+        canvas.removeEventListener('pointermove', onPointerMove);
+        canvas.removeEventListener('pointerup', onPointerUp);
+        canvas.removeEventListener('pointercancel', onPointerUp);
+
+        // Lógica de Encaixe (Snap Check)
+        // Desconto da margem do tab
+        const targetX = piece.correctX - piece.tabSize;
+        const targetY = piece.correctY - piece.tabSize;
+
+        const distance = Math.hypot(piece.currentX - targetX, piece.currentY - targetY);
+        const snapThreshold = piece.tabSize * 1.2; // Distância de atração
+
+        if (distance < snapThreshold) {
+          // SNAP PERFEITO!
+          piece.isSnapped = true;
+          piece.currentX = targetX;
+          piece.currentY = targetY;
+
+          canvas.classList.add('jigsaw-snap-transition');
+          canvas.style.left = `${targetX}px`;
+          canvas.style.top = `${targetY}px`;
+          canvas.classList.remove('cursor-grab');
+          canvas.classList.add('cursor-default');
+
+          sound.playSnap();
+
+          snappedCount = jigsawPieces.filter((jigsawPiece) => jigsawPiece.isSnapped).length;
+          statCounter = snappedCount;
+          statCounterDisplay.textContent = `${snappedCount}/${gridSize * gridSize}`;
+
+          setTimeout(() => {
+            canvas.classList.remove('jigsaw-snap-transition');
+          }, 200);
+
+          if (isJigsawSolved() && isGameActive) {
+            clearInterval(timerInterval);
+            isGameActive = false;
+            setTimeout(() => {
+              if (isJigsawSolved() && !isGameActive) {
+                showVictoryModal("Tempo Total", timerDisplay.textContent, "Peças Montadas", `${snappedCount}/${gridSize * gridSize}`);
+              }
+            }, 300);
+          }
+        }
+      };
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+    }
+
+    function isJigsawSolved() {
+      const totalPieces = gridSize * gridSize;
+      return currentMode === 'jigsaw' &&
+        jigsawPieces.length === totalPieces &&
+        snappedCount === totalPieces &&
+        jigsawPieces.every((piece, index) => {
+          const expectedX = piece.correctX - piece.tabSize;
+          const expectedY = piece.correctY - piece.tabSize;
+          return piece.id === index &&
+            piece.row === Math.floor(index / gridSize) &&
+            piece.col === index % gridSize &&
+            piece.isSnapped &&
+            piece.currentX === expectedX &&
+            piece.currentY === expectedY;
+        });
+    }
+
+    btnScatter.addEventListener('click', () => {
+      if (currentMode === 'jigsaw') scatterJigsawPieces();
+    });
+
+
+    // ==========================================
+    // RECURSOS COMPARTILHADOS & MODAL
+    // ==========================================
+    gridSizeSelect.addEventListener('change', () => initCurrentGame());
+
+    btnRestart.addEventListener('click', () => initCurrentGame());
+
+    // Upload de imagem personalizada
+    imageInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          currentImageSrc = evt.target.result;
+          renderPresets();
+          preloadImage(currentImageSrc, () => {
+            initCurrentGame();
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // Preview de Imagem (Segurar)
+    const showPreview = () => previewOverlay.classList.remove('hidden');
+    const hidePreview = () => previewOverlay.classList.add('hidden');
+
+    btnPreview.addEventListener('mousedown', showPreview);
+    btnPreview.addEventListener('mouseup', hidePreview);
+    btnPreview.addEventListener('mouseleave', hidePreview);
+
+    btnPreview.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      showPreview();
+    });
+    btnPreview.addEventListener('touchend', hidePreview);
+
+    // Exibe Modal de Vitória
+    function showVictoryModal(timeLabel, timeVal, statLbl, statVal) {
+      finalTime.textContent = timeVal;
+      finalStatLabel.textContent = statLbl;
+      finalStatVal.textContent = statVal;
+
+      triggerConfetti();
+
+      victoryModal.classList.remove('hidden');
+      setTimeout(() => {
+        modalContent.classList.remove('scale-90', 'opacity-0');
+        modalContent.classList.add('scale-100', 'opacity-100');
+      }, 10);
+    }
+
+    function hideVictoryModal() {
+      modalContent.classList.remove('scale-100', 'opacity-100');
+      modalContent.classList.add('scale-90', 'opacity-0');
+      setTimeout(() => {
+        victoryModal.classList.add('hidden');
+      }, 200);
+    }
+
+    btnPlayAgain.addEventListener('click', () => {
+      hideVictoryModal();
+      initCurrentGame();
+    });
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 90,
+          spread: 80,
+          origin: { y: 0.6 }
+        });
+      }
+    }
+
+    // Redimensionamento responsivo do Canvas Jigsaw ao girar a tela
+    window.addEventListener('resize', () => {
+      if (currentMode === 'jigsaw' && !isGameActive && snappedCount === 0) {
+        initJigsawPuzzle();
+      }
+    });
+
+
+    // Instalação PWA e cache offline. O botão usa o diálogo nativo quando disponível.
+    let deferredInstallPrompt = null;
+    const installButton = document.getElementById('btn-install');
+    const installStatus = document.getElementById('install-status');
+    const installHelp = document.getElementById('install-help');
+    const installHelpText = document.getElementById('install-help-text');
+
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      installStatus.textContent = 'Seu navegador permite instalar o aplicativo.';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      installStatus.textContent = 'Aplicativo instalado com sucesso.';
+      installHelp.classList.remove('visible');
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const choice = await deferredInstallPrompt.userChoice;
+        installStatus.textContent = choice.outcome === 'accepted'
+          ? 'Instalação confirmada pelo navegador.'
+          : 'Instalação não concluída. Você pode tentar novamente pelo menu do navegador.';
+        deferredInstallPrompt = null;
+        return;
+      }
+      const ua = navigator.userAgent || '';
+      if (/iphone|ipad|ipod/i.test(ua)) {
+        installHelpText.textContent = 'No Safari, toque em Compartilhar e depois em “Adicionar à Tela de Início”.';
+      } else if (/android/i.test(ua)) {
+        installHelpText.textContent = 'No Chrome ou navegador compatível, abra o menu ⋮ e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.';
+      } else {
+        installHelpText.textContent = 'No Chrome ou Edge, procure o ícone Instalar na barra de endereço ou abra o menu do navegador e escolha “Instalar aplicativo”.';
+      }
+      installHelp.classList.toggle('visible');
+      installStatus.textContent = 'A instalação automática não está disponível neste momento. Veja as instruções abaixo.';
+    });
+
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch((error) => {
+          console.warn('Não foi possível registrar o modo offline:', error);
+        });
+      });
+    }
+
+  </script>
+</body>
+</html>
