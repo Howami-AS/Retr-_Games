@@ -1096,16 +1096,35 @@
     const installStatus = document.getElementById('install-status');
     const installHelp = document.getElementById('install-help');
     const installHelpText = document.getElementById('install-help-text');
+    const installedAppStorageKey = 'retro-games-installed';
 
     function hideInstallPanel() {
       installPanel.classList.add('hidden');
     }
 
+    function rememberInstalledApp() {
+      try {
+        localStorage.setItem(installedAppStorageKey, 'true');
+      } catch (error) {
+        console.warn('Não foi possível salvar o estado de instalação do aplicativo:', error);
+      }
+    }
+
+    function isInstalledAppRemembered() {
+      try {
+        return localStorage.getItem(installedAppStorageKey) === 'true';
+      } catch (error) {
+        console.warn('Não foi possível consultar o estado de instalação do aplicativo:', error);
+        return false;
+      }
+    }
+
     const isInstalledApp = window.matchMedia('(display-mode: standalone)').matches ||
       window.navigator.standalone === true;
-    if (isInstalledApp) {
+    if (isInstalledApp || isInstalledAppRemembered()) {
       hideInstallPanel();
     }
+    if (isInstalledApp) rememberInstalledApp();
 
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
@@ -1115,6 +1134,7 @@
 
     window.addEventListener('appinstalled', () => {
       deferredInstallPrompt = null;
+      rememberInstalledApp();
       hideInstallPanel();
     });
 
@@ -1123,6 +1143,7 @@
         deferredInstallPrompt.prompt();
         const choice = await deferredInstallPrompt.userChoice;
         if (choice.outcome === 'accepted') {
+          rememberInstalledApp();
           hideInstallPanel();
         } else {
           installStatus.textContent = 'Instalação não concluída. Você pode tentar novamente pelo menu do navegador.';
