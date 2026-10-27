@@ -30,15 +30,19 @@
       overscroll-behavior: none;
     }
 
-    body.jigsaw-dragging {
+    body.game-gesture-active {
       position: fixed;
-      top: var(--jigsaw-drag-scroll-top);
+      top: var(--game-drag-scroll-top);
       left: 0;
       right: 0;
       overflow: hidden !important;
     }
 
     .jigsaw-piece {
+      touch-action: none;
+    }
+
+    .sliding-tile {
       touch-action: none;
     }
 
@@ -351,6 +355,7 @@
     let timerInterval = null;
     let secondsElapsed = 0;
     let isGameActive = false;
+    let pageScrollY = 0;
     let statCounter = 0; // Movimentos no Sliding, ou Peças Encaixadas no Jigsaw
 
     // Estado Específico Sliding
@@ -495,6 +500,20 @@
       timerDisplay.textContent = "00:00";
     }
 
+    function lockPageScroll() {
+      if (document.body.classList.contains('game-gesture-active')) return;
+      pageScrollY = window.scrollY;
+      document.body.style.setProperty('--game-drag-scroll-top', `${-pageScrollY}px`);
+      document.body.classList.add('game-gesture-active');
+    }
+
+    function unlockPageScroll() {
+      if (!document.body.classList.contains('game-gesture-active')) return;
+      document.body.classList.remove('game-gesture-active');
+      document.body.style.removeProperty('--game-drag-scroll-top');
+      window.scrollTo(0, pageScrollY);
+    }
+
     function startTimer() {
       if (!isGameActive) {
         isGameActive = true;
@@ -613,6 +632,7 @@
     function addSwipeToSliding(element, originalVal) {
       let startX = 0, startY = 0;
       element.addEventListener('touchstart', (e) => {
+        lockPageScroll();
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
       }, { passive: true });
@@ -623,7 +643,10 @@
         if (Math.abs(diffX) > 15 || Math.abs(diffY) > 15) {
           handleSlidingClick(originalVal);
         }
+        unlockPageScroll();
       }, { passive: true });
+
+      element.addEventListener('touchcancel', unlockPageScroll, { passive: true });
     }
 
     function checkSlidingVictory() {
@@ -847,16 +870,13 @@
       let startX = 0, startY = 0;
       let initialLeft = 0, initialTop = 0;
       let activePointerId = null;
-      let dragScrollY = 0;
 
       const onPointerDown = (e) => {
         if (piece.isSnapped || activePointerId !== null) return;
         e.preventDefault();
         startTimer();
         activePointerId = e.pointerId;
-        dragScrollY = window.scrollY;
-        document.body.style.setProperty('--jigsaw-drag-scroll-top', `${-dragScrollY}px`);
-        document.body.classList.add('jigsaw-dragging');
+        lockPageScroll();
 
         canvas.classList.add('jigsaw-piece-active');
         canvas.style.transform = 'none';
@@ -904,9 +924,7 @@
       const onPointerUp = (e) => {
         if (piece.isSnapped || e.pointerId !== activePointerId) return;
         activePointerId = null;
-        document.body.classList.remove('jigsaw-dragging');
-        document.body.style.removeProperty('--jigsaw-drag-scroll-top');
-        window.scrollTo(0, dragScrollY);
+        unlockPageScroll();
         canvas.classList.remove('jigsaw-piece-active');
         canvas.style.transform = 'none';
 
