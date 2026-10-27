@@ -107,7 +107,7 @@
   <section class="install-panel mb-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-center sm:text-left">
-        <p class="font-bold text-sm text-slate-100">Tenha o Puzzle Studio no seu dispositivo</p>
+        <p class="font-bold text-sm text-slate-100">Tenha o Retrô Games no seu dispositivo</p>
         <p id="install-status" class="text-xs text-slate-400 mt-1">Instale para abrir como aplicativo. A instalação depende do navegador e do endereço HTTPS.</p>
       </div>
       <button id="btn-install" type="button" class="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition">Instalar aplicativo</button>
@@ -627,6 +627,7 @@
     // ==========================================
     function initJigsawPuzzle() {
       gridSize = parseInt(gridSizeSelect.value, 10);
+      jigsawGuide.classList.remove('hidden');
       jigsawBoard.innerHTML = '';
       jigsawPiecesTray.innerHTML = '';
       snappedCount = 0;
@@ -790,29 +791,38 @@
     // Espalha as peças na bandeja e adiciona os escutadores de Drag & Drop
     function scatterJigsawPieces() {
       jigsawPiecesTray.innerHTML = '';
-      const trayBounds = jigsawPiecesTray.getBoundingClientRect();
-      const trayW = jigsawPiecesTray.clientWidth || 350;
-      const trayH = jigsawPiecesTray.clientHeight || 180;
 
       jigsawPieces.forEach((piece) => {
         if (piece.isSnapped) return;
-
-        // Posição inicial randômica na bandeja
-        const maxX = trayW - piece.canvas.width;
-        const maxY = trayH - piece.canvas.height;
-
-        const randX = Math.max(0, Math.random() * maxX);
-        const randY = Math.max(0, Math.random() * maxY);
-
-        piece.currentX = randX;
-        piece.currentY = randY;
-
-        piece.canvas.style.left = `${randX}px`;
-        piece.canvas.style.top = `${randY}px`;
-        piece.canvas.style.transform = `rotate(${(Math.random() - 0.5) * 20}deg)`; // Rotação charmosa
-        jigsawPiecesTray.appendChild(piece.canvas);
-        jigsawPiecesTray.appendChild(piece.canvas);
+        placeJigsawPieceInTray(piece);
       });
+    }
+
+    function placeJigsawPieceInTray(piece) {
+      const trayW = jigsawPiecesTray.clientWidth || 350;
+      const trayH = jigsawPiecesTray.clientHeight || 180;
+      const maxX = Math.max(0, trayW - piece.canvas.width);
+      const maxY = Math.max(0, trayH - piece.canvas.height);
+
+      piece.currentX = Math.random() * maxX;
+      piece.currentY = Math.random() * maxY;
+      piece.canvas.style.left = `${piece.currentX}px`;
+      piece.canvas.style.top = `${piece.currentY}px`;
+      piece.canvas.style.transform = `rotate(${(Math.random() - 0.5) * 20}deg)`;
+      jigsawPiecesTray.appendChild(piece.canvas);
+    }
+
+    function returnJigsawPieceToTray(piece) {
+      const pieceBounds = piece.canvas.getBoundingClientRect();
+      const trayBounds = jigsawPiecesTray.getBoundingClientRect();
+      const maxX = Math.max(0, jigsawPiecesTray.clientWidth - pieceBounds.width);
+      const maxY = Math.max(0, jigsawPiecesTray.clientHeight - pieceBounds.height);
+
+      piece.currentX = Math.min(maxX, Math.max(0, pieceBounds.left - trayBounds.left));
+      piece.currentY = Math.min(maxY, Math.max(0, pieceBounds.top - trayBounds.top));
+      piece.canvas.style.left = `${piece.currentX}px`;
+      piece.canvas.style.top = `${piece.currentY}px`;
+      jigsawPiecesTray.appendChild(piece.canvas);
     }
 
     // Sistema Universal de Drag & Drop (Mouse + Touch Pointer Events)
@@ -820,15 +830,16 @@
       const canvas = piece.canvas;
       let startX = 0, startY = 0;
       let initialLeft = 0, initialTop = 0;
+      let activePointerId = null;
 
       const onPointerDown = (e) => {
-        if (piece.isSnapped) return;
+        if (piece.isSnapped || activePointerId !== null) return;
         e.preventDefault();
         startTimer();
+        activePointerId = e.pointerId;
 
-        canvas.setPointerCapture(e.pointerId);
         canvas.classList.add('jigsaw-piece-active');
-        canvas.style.transform = 'rotate(0deg) scale(1.05)';
+        canvas.style.transform = 'none';
 
         startX = e.clientX;
         startY = e.clientY;
@@ -848,16 +859,19 @@
         canvas.style.left = `${initialLeft}px`;
         canvas.style.top = `${initialTop}px`;
 
-        canvas.addEventListener('pointermove', onPointerMove);
-        canvas.addEventListener('pointerup', onPointerUp);
-        canvas.addEventListener('pointercancel', onPointerUp);
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
       };
 
       const onPointerMove = (e) => {
-        if (piece.isSnapped) return;
+        if (piece.isSnapped || e.pointerId !== activePointerId) return;
         
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
+        if (gridSize > 3 && (dx !== 0 || dy !== 0)) {
+          jigsawGuide.classList.add('hidden');
+        }
 
         piece.currentX = initialLeft + dx;
         piece.currentY = initialTop + dy;
@@ -867,16 +881,14 @@
       };
 
       const onPointerUp = (e) => {
-        if (piece.isSnapped) return;
-        if (canvas.hasPointerCapture(e.pointerId)) {
-          canvas.releasePointerCapture(e.pointerId);
-        }
+        if (piece.isSnapped || e.pointerId !== activePointerId) return;
+        activePointerId = null;
         canvas.classList.remove('jigsaw-piece-active');
-        canvas.style.transform = 'rotate(0deg) scale(1)';
+        canvas.style.transform = 'none';
 
-        canvas.removeEventListener('pointermove', onPointerMove);
-        canvas.removeEventListener('pointerup', onPointerUp);
-        canvas.removeEventListener('pointercancel', onPointerUp);
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerUp);
 
         // Lógica de Encaixe (Snap Check)
         // Desconto da margem do tab
@@ -917,6 +929,13 @@
               }
             }, 300);
           }
+        } else {
+          const trayBounds = jigsawPiecesTray.getBoundingClientRect();
+          const droppedInTray = e.clientX >= trayBounds.left &&
+            e.clientX <= trayBounds.right &&
+            e.clientY >= trayBounds.top &&
+            e.clientY <= trayBounds.bottom;
+          if (droppedInTray) returnJigsawPieceToTray(piece);
         }
       };
 
