@@ -128,7 +128,7 @@
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-center sm:text-left">
         <p class="font-bold text-sm text-slate-100">Tenha o Retrô Games no seu dispositivo</p>
-        <p id="install-status" class="text-xs text-slate-400 mt-1">Instale para abrir como aplicativo. A instalação depende do navegador e do endereço HTTPS.</p>
+        <p id="install-status" class="text-xs text-slate-400 mt-1">Adicione o Retrô Games ao seu dispositivo para abrir como aplicativo.</p>
       </div>
       <button id="btn-install" type="button" class="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition">Instalar aplicativo</button>
     </div>
@@ -1138,11 +1138,16 @@
       } else {
         installHelpText.textContent = 'No Chrome ou Edge, procure o ícone Instalar na barra de endereço ou abra o menu do navegador e escolha “Instalar aplicativo”.';
       }
+      if (!window.isSecureContext) {
+        installHelpText.textContent = 'O jogo funciona neste endereço, mas a instalação como aplicativo depende das regras de segurança do navegador. Tente abrir por HTTPS ou em localhost e use a opção de instalação do navegador.';
+      }
       installHelp.classList.toggle('visible');
-      installStatus.textContent = 'A instalação automática não está disponível neste momento. Veja as instruções abaixo.';
+      installStatus.textContent = window.isSecureContext
+        ? 'A instalação automática não está disponível neste momento. Veja as instruções abaixo.'
+        : 'A instalação depende do suporte do navegador para este endereço.';
     });
 
-    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    if ('serviceWorker' in navigator && window.isSecureContext && /^https?:$/.test(location.protocol)) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./service-worker.js').catch((error) => {
           console.warn('Não foi possível registrar o modo offline:', error);
