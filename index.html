@@ -26,6 +26,22 @@
       touch-action: manipulation;
     }
 
+    html, body {
+      overscroll-behavior: none;
+    }
+
+    body.jigsaw-dragging {
+      position: fixed;
+      top: var(--jigsaw-drag-scroll-top);
+      left: 0;
+      right: 0;
+      overflow: hidden !important;
+    }
+
+    .jigsaw-piece {
+      touch-action: none;
+    }
+
     /* Animação suave no modo Deslizante */
     .sliding-tile {
       transition: transform 0.18s cubic-bezier(0.2, 0, 0.2, 1);
@@ -104,7 +120,7 @@
   </header>
 
   <!-- Instalação PWA: o fluxo nativo aparece quando o navegador oferece suporte -->
-  <section class="install-panel mb-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
+  <section id="install-panel" class="install-panel mb-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
     <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-center sm:text-left">
         <p class="font-bold text-sm text-slate-100">Tenha o Retrô Games no seu dispositivo</p>
@@ -750,7 +766,7 @@
 
       ctx.restore();
 
-      canvas.className = 'absolute cursor-grab touch-none select-none drop-shadow-md';
+      canvas.className = 'jigsaw-piece absolute cursor-grab touch-none select-none drop-shadow-md';
       return canvas;
     }
 
@@ -831,12 +847,16 @@
       let startX = 0, startY = 0;
       let initialLeft = 0, initialTop = 0;
       let activePointerId = null;
+      let dragScrollY = 0;
 
       const onPointerDown = (e) => {
         if (piece.isSnapped || activePointerId !== null) return;
         e.preventDefault();
         startTimer();
         activePointerId = e.pointerId;
+        dragScrollY = window.scrollY;
+        document.body.style.setProperty('--jigsaw-drag-scroll-top', `${-dragScrollY}px`);
+        document.body.classList.add('jigsaw-dragging');
 
         canvas.classList.add('jigsaw-piece-active');
         canvas.style.transform = 'none';
@@ -859,13 +879,14 @@
         canvas.style.left = `${initialLeft}px`;
         canvas.style.top = `${initialTop}px`;
 
-        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointermove', onPointerMove, { passive: false });
         window.addEventListener('pointerup', onPointerUp);
         window.addEventListener('pointercancel', onPointerUp);
       };
 
       const onPointerMove = (e) => {
         if (piece.isSnapped || e.pointerId !== activePointerId) return;
+        e.preventDefault();
         
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -883,6 +904,9 @@
       const onPointerUp = (e) => {
         if (piece.isSnapped || e.pointerId !== activePointerId) return;
         activePointerId = null;
+        document.body.classList.remove('jigsaw-dragging');
+        document.body.style.removeProperty('--jigsaw-drag-scroll-top');
+        window.scrollTo(0, dragScrollY);
         canvas.classList.remove('jigsaw-piece-active');
         canvas.style.transform = 'none';
 
@@ -1049,10 +1073,21 @@
 
     // Instalação PWA e cache offline. O botão usa o diálogo nativo quando disponível.
     let deferredInstallPrompt = null;
+    const installPanel = document.getElementById('install-panel');
     const installButton = document.getElementById('btn-install');
     const installStatus = document.getElementById('install-status');
     const installHelp = document.getElementById('install-help');
     const installHelpText = document.getElementById('install-help-text');
+
+    function hideInstallPanel() {
+      installPanel.classList.add('hidden');
+    }
+
+    const isInstalledApp = window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+    if (isInstalledApp) {
+      hideInstallPanel();
+    }
 
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
@@ -1062,17 +1097,18 @@
 
     window.addEventListener('appinstalled', () => {
       deferredInstallPrompt = null;
-      installStatus.textContent = 'Aplicativo instalado com sucesso.';
-      installHelp.classList.remove('visible');
+      hideInstallPanel();
     });
 
     installButton.addEventListener('click', async () => {
       if (deferredInstallPrompt) {
         deferredInstallPrompt.prompt();
         const choice = await deferredInstallPrompt.userChoice;
-        installStatus.textContent = choice.outcome === 'accepted'
-          ? 'Instalação confirmada pelo navegador.'
-          : 'Instalação não concluída. Você pode tentar novamente pelo menu do navegador.';
+        if (choice.outcome === 'accepted') {
+          hideInstallPanel();
+        } else {
+          installStatus.textContent = 'Instalação não concluída. Você pode tentar novamente pelo menu do navegador.';
+        }
         deferredInstallPrompt = null;
         return;
       }
