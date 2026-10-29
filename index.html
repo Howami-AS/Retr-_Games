@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Retrô Games — Quebra-Cabeça 2 em 1</title>
+  <title>Retrô Games — Jogos de Quebra-Cabeça</title>
   <meta name="theme-color" content="#0f172a">
-  <meta name="description" content="Jogue quebra-cabeças deslizantes e tradicionais com imagens próprias, no celular ou computador.">
+  <meta name="description" content="Escolha entre quebra-cabeças deslizantes e tradicionais, com imagens próprias, no celular ou computador.">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -36,6 +36,184 @@
       left: 0;
       right: 0;
       overflow: hidden !important;
+    }
+
+    body.menu-active {
+      min-height: 100dvh;
+      justify-content: center;
+    }
+
+    body.menu-active > header,
+    body.menu-active > main,
+    body.menu-active > footer {
+      display: none;
+    }
+
+    #game-menu {
+      display: none;
+    }
+
+    body.menu-active #game-menu {
+      display: flex;
+    }
+
+    body.game-screen-active {
+      height: 100dvh;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+      justify-content: flex-start;
+      gap: 8px;
+    }
+
+    body.game-screen-active:fullscreen {
+      width: 100%;
+      background: #020617;
+    }
+
+    body.game-screen-active #install-panel,
+    body.game-screen-active > footer {
+      display: none;
+    }
+
+    body.game-screen-active > header {
+      flex: 0 0 auto;
+      gap: 8px;
+      margin: 0 auto;
+    }
+
+    body.game-screen-active > header > div:first-child {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    body.game-screen-active #fullscreen-status {
+      color: #fbbf24;
+      font-size: 0.7rem;
+    }
+
+    body.game-screen-active > header h1 {
+      font-size: 1.25rem;
+    }
+
+    body.game-screen-active > header p {
+      display: none;
+    }
+
+    body.game-screen-active > header > div:last-child {
+      max-width: 24rem;
+    }
+
+    body.game-screen-active > main {
+      flex: 1 1 auto;
+      min-height: 0;
+      gap: 8px;
+      overflow: hidden;
+    }
+
+    body.game-screen-active > main > :first-child {
+      flex: 0 0 auto;
+      padding: 6px;
+    }
+
+    body.game-screen-active > main > :first-child > div {
+      gap: 6px;
+    }
+
+    body.game-screen-active > main > :first-child > div > div:first-child {
+      padding: 4px;
+    }
+
+    body.game-screen-active > main > div:nth-child(2) > div > label:first-child,
+    body.game-screen-active > main > div:nth-child(3) > span {
+      display: none;
+    }
+
+    body.game-screen-active > main > div:nth-child(2) {
+      gap: 8px;
+    }
+
+    body.game-screen-active #presets-container button {
+      width: 2rem;
+      height: 2rem;
+    }
+
+    body.game-screen-active #game-workspace {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    body.game-screen-active #sliding-container {
+      width: min(100%, 28rem, calc(100dvh - 370px));
+      aspect-ratio: 1;
+    }
+
+    body.game-screen-active #jigsaw-container {
+      height: 100%;
+      min-height: 0;
+      gap: 8px;
+    }
+
+    body.game-screen-active #jigsaw-container > div:first-child {
+      width: min(100%, 28rem, calc(100dvh - 410px));
+      flex: 0 0 auto;
+      aspect-ratio: 1;
+    }
+
+    body.game-screen-active #jigsaw-container > div:last-child {
+      flex: 0 0 auto;
+      padding: 4px;
+    }
+
+    body.game-screen-active #jigsaw-pieces-tray {
+      height: 72px;
+      min-height: 72px;
+    }
+
+    body.game-screen-active #jigsaw-container > div:last-child > div:first-child {
+      margin-bottom: 4px;
+    }
+
+    body.game-screen-active #jigsaw-container > div:last-child > div:first-child > span {
+      font-size: 10px;
+    }
+
+    body.game-screen-active #jigsaw-container > div:last-child button {
+      font-size: 10px;
+    }
+
+    body.game-screen-active > main > div:last-child {
+      flex: 0 0 auto;
+      margin-top: 0;
+    }
+
+    body.game-screen-active > main > div:last-child button {
+      padding-top: 8px;
+      padding-bottom: 8px;
+    }
+
+    @media (max-height: 600px) {
+      body.game-screen-active {
+        padding: 4px;
+        gap: 4px;
+      }
+
+      body.game-screen-active > header,
+      body.game-screen-active > main {
+        gap: 4px;
+      }
+
+      body.game-screen-active #jigsaw-pieces-tray {
+        height: 56px;
+        min-height: 56px;
+      }
+
+      body.game-screen-active #jigsaw-container > div:first-child {
+        width: min(100%, 28rem, calc(100dvh - 410px));
+      }
     }
 
     .jigsaw-piece {
@@ -99,15 +277,68 @@
     @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between p-2 sm:p-5 overflow-x-hidden">
+<body class="menu-active bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between p-2 sm:p-5 overflow-x-hidden">
+
+  <section id="game-menu" class="w-full max-w-4xl mx-auto flex-col items-center gap-6 px-2" aria-labelledby="menu-title">
+    <div class="text-center">
+      <h1 id="menu-title" class="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+        Retrô Games
+      </h1>
+      <p class="text-sm sm:text-base text-slate-400 mt-2">Escolha um jogo para começar</p>
+    </div>
+
+    <div class="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
+      <button type="button" class="game-choice group rounded-3xl border border-slate-800 bg-slate-900/80 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:border-indigo-500/70 hover:bg-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-400" data-mode="sliding">
+        <span class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 transition group-hover:bg-indigo-500/20">
+          <i data-lucide="grid-3x3" class="h-7 w-7"></i>
+        </span>
+        <span class="block text-xl font-extrabold text-slate-100">Quebra-cabeça deslizante</span>
+        <span class="mt-2 block text-sm leading-relaxed text-slate-400">Deslize as peças pelo tabuleiro até reconstruir a imagem.</span>
+        <span class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-indigo-300">Jogar agora <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+      </button>
+
+      <button type="button" class="game-choice group rounded-3xl border border-slate-800 bg-slate-900/80 p-6 text-left shadow-xl transition hover:-translate-y-1 hover:border-indigo-500/70 hover:bg-slate-900 focus-visible:outline-2 focus-visible:outline-indigo-400" data-mode="jigsaw">
+        <span class="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-purple-500/20 bg-purple-500/10 text-purple-400 transition group-hover:bg-purple-500/20">
+          <i data-lucide="puzzle" class="h-7 w-7"></i>
+        </span>
+        <span class="block text-xl font-extrabold text-slate-100">Quebra-cabeça tradicional</span>
+        <span class="mt-2 block text-sm leading-relaxed text-slate-400">Arraste as peças para a posição correta e monte a imagem.</span>
+        <span class="mt-5 inline-flex items-center gap-2 text-sm font-bold text-purple-300">Jogar agora <i data-lucide="arrow-right" class="h-4 w-4"></i></span>
+      </button>
+    </div>
+
+    <section id="install-panel" class="install-panel bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="text-center sm:text-left">
+          <p class="font-bold text-sm text-slate-100">Tenha o Retrô Games no seu dispositivo</p>
+          <p id="install-status" class="text-xs text-slate-400 mt-1">Adicione o Retrô Games ao seu dispositivo para abrir como aplicativo.</p>
+        </div>
+        <button id="btn-install" type="button" class="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition">Instalar aplicativo</button>
+      </div>
+      <div id="install-help" class="install-help mt-3 text-xs leading-relaxed text-slate-300 border-t border-slate-800 pt-3">
+        <p class="font-bold mb-1">Como instalar neste dispositivo</p>
+        <p id="install-help-text">Abra este site em um navegador compatível e use o menu do navegador para instalar ou adicionar à tela inicial.</p>
+        <p class="mt-2 text-slate-400">No iPhone/iPad: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. No Android: use “Instalar aplicativo” ou “Adicionar à tela inicial” no menu do navegador. No computador: procure “Instalar” na barra de endereço ou no menu do navegador.</p>
+      </div>
+    </section>
+  </section>
 
   <!-- Cabeçalho & Menu de Navegação entre Modos -->
   <header class="w-full max-w-4xl mx-auto flex flex-col items-center gap-3 mb-2">
-    <div class="text-center">
+    <div>
+      <button id="btn-back-to-menu" type="button" class="shrink-0 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-indigo-500/50 hover:text-white">
+        <span class="flex items-center gap-1.5"><i data-lucide="arrow-left" class="h-4 w-4"></i> Jogos</span>
+      </button>
+      <button id="btn-fullscreen" type="button" class="shrink-0 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-300 transition hover:border-indigo-500/50 hover:text-white" aria-label="Entrar em tela inteira">
+        <span class="flex items-center gap-1.5"><i data-lucide="maximize" class="h-4 w-4"></i><span>Tela cheia</span></span>
+      </button>
+      <div class="text-center">
       <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
         Retrô Games
       </h1>
       <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Escolha o estilo de quebra-cabeça e monte sua imagem favorita</p>
+      </div>
+      <p id="fullscreen-status" class="hidden" role="status" aria-live="polite"></p>
     </div>
 
     <!-- Abas para Trocar de Modo -->
@@ -122,22 +353,6 @@
       </button>
     </div>
   </header>
-
-  <!-- Instalação PWA: o fluxo nativo aparece quando o navegador oferece suporte -->
-  <section id="install-panel" class="install-panel mb-3 bg-slate-900/80 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-lg" aria-label="Instalar aplicativo">
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="text-center sm:text-left">
-        <p class="font-bold text-sm text-slate-100">Tenha o Retrô Games no seu dispositivo</p>
-        <p id="install-status" class="text-xs text-slate-400 mt-1">Adicione o Retrô Games ao seu dispositivo para abrir como aplicativo.</p>
-      </div>
-      <button id="btn-install" type="button" class="w-full sm:w-auto shrink-0 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold py-3 px-4 rounded-xl transition">Instalar aplicativo</button>
-    </div>
-    <div id="install-help" class="install-help mt-3 text-xs leading-relaxed text-slate-300 border-t border-slate-800 pt-3">
-      <p class="font-bold mb-1">Como instalar neste dispositivo</p>
-      <p id="install-help-text">Abra este site em um navegador compatível e use o menu do navegador para instalar ou adicionar à tela inicial.</p>
-      <p class="mt-2 text-slate-400">No iPhone/iPad: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”. No Android: use “Instalar aplicativo” ou “Adicionar à tela inicial” no menu do navegador. No computador: procure “Instalar” na barra de endereço ou no menu do navegador.</p>
-    </div>
-  </section>
 
   <!-- Container Principal -->
   <main class="w-full max-w-4xl mx-auto flex flex-col items-center gap-3">
@@ -369,6 +584,10 @@
     // DOM Elements
     const tabSliding = document.getElementById('tab-sliding');
     const tabJigsaw = document.getElementById('tab-jigsaw');
+    const gameChoices = document.querySelectorAll('.game-choice');
+    const backToMenuButton = document.getElementById('btn-back-to-menu');
+    const fullscreenButton = document.getElementById('btn-fullscreen');
+    const fullscreenStatus = document.getElementById('fullscreen-status');
     const currentModeBadge = document.getElementById('current-mode-badge');
     const statLabel = document.getElementById('stat-label');
     const statCounterDisplay = document.getElementById('stat-counter');
@@ -405,7 +624,9 @@
       lucide.createIcons();
       renderPresets();
       preloadImage(currentImageSrc, () => {
-        initCurrentGame();
+        if (document.body.classList.contains('game-screen-active')) {
+          initCurrentGame();
+        }
       });
     };
 
@@ -452,6 +673,79 @@
     // Alternar entre Modos
     tabSliding.addEventListener('click', () => setMode('sliding'));
     tabJigsaw.addEventListener('click', () => setMode('jigsaw'));
+    gameChoices.forEach((choice) => {
+      choice.addEventListener('click', () => openGame(choice.dataset.mode));
+    });
+    backToMenuButton.addEventListener('click', returnToGameMenu);
+    fullscreenButton.addEventListener('click', toggleFullscreen);
+    document.addEventListener('fullscreenchange', updateFullscreenControls);
+
+    function openGame(mode) {
+      document.body.classList.remove('menu-active');
+      document.body.classList.add('game-screen-active');
+      void enterFullscreen();
+      if (mode !== currentMode) {
+        setMode(mode);
+      } else {
+        initCurrentGame();
+      }
+    }
+
+    async function enterFullscreen() {
+      if (document.fullscreenElement) return;
+      if (!document.documentElement.requestFullscreen) {
+        showFullscreenStatus('Este navegador não permite abrir em tela inteira.');
+        return;
+      }
+
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (error) {
+        showFullscreenStatus('Não foi possível abrir em tela inteira. Use o botão para tentar novamente.');
+        console.warn('Não foi possível abrir o jogo em tela inteira:', error);
+      }
+    }
+
+    async function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+      await enterFullscreen();
+    }
+
+    function showFullscreenStatus(message) {
+      fullscreenStatus.textContent = message;
+      fullscreenStatus.classList.remove('hidden');
+    }
+
+    function updateFullscreenControls() {
+      const isFullscreen = Boolean(document.fullscreenElement);
+      fullscreenButton.setAttribute('aria-label', isFullscreen ? 'Sair da tela inteira' : 'Entrar em tela inteira');
+      fullscreenButton.firstElementChild.innerHTML = `<i data-lucide="${isFullscreen ? 'minimize' : 'maximize'}" class="h-4 w-4"></i><span>${isFullscreen ? 'Sair' : 'Tela cheia'}</span>`;
+      lucide.createIcons();
+
+      if (isFullscreen) {
+        fullscreenStatus.classList.add('hidden');
+      } else if (document.body.classList.contains('game-screen-active')) {
+        showFullscreenStatus('O jogo saiu da tela inteira. Use o botão para voltar.');
+      }
+    }
+
+    function returnToGameMenu() {
+      unlockPageScroll();
+      resetTimer();
+      if (!victoryModal.classList.contains('hidden')) {
+        hideVictoryModal();
+      }
+      document.body.classList.remove('game-screen-active');
+      document.body.classList.add('menu-active');
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch((error) => {
+          console.warn('Não foi possível sair da tela inteira:', error);
+        });
+      }
+    }
 
     function setMode(mode) {
       if (currentMode === mode) return;

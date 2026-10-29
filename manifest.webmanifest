@@ -1,8 +1,8 @@
 {
   "id": "./retr-o-games-app/",
-  "name": "Retrô Games — Quebra-Cabeça",
+  "name": "Retrô Games",
   "short_name": "Retrô Games",
-  "description": "Jogue quebra-cabeças deslizantes e tradicionais com suas imagens favoritas.",
+  "description": "Escolha entre quebra-cabeças deslizantes e tradicionais com suas imagens favoritas.",
   "lang": "pt-BR",
   "start_url": "./",
   "scope": "./",
